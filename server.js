@@ -11,12 +11,26 @@ app.use(cors());
 app.use(express.json());
 
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
+    host: process.env.DB_HOST || 'acela.proxy.rlwy.net',
+    user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT
+    database: process.env.DB_NAME || 'railway',
+    port: process.env.DB_PORT || 25984,
+    ssl: {
+        rejectUnauthorized: false
+    }
 };
+
+(async () => {
+    try {
+        const conn = await mysql.createConnection(dbConfig);
+        console.log("✅ Railway MySQL Connected!");
+        await conn.end();
+    } catch (err) {
+        console.error("❌ Database Connection Failed");
+        console.error(err);
+    }
+})();
 
 // Register
 app.post('/api/register', async (req, res) => {
@@ -203,6 +217,31 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+
+app.get('/db-test', async (req, res) => {
+    try {
+        const conn = await mysql.createConnection(dbConfig);
+
+        const [rows] = await conn.execute('SELECT NOW() as current_time');
+
+        await conn.end();
+
+        res.json({
+            success: true,
+            database_connected: true,
+            result: rows
+        });
+
+    } catch (err) {
+        console.error(err);
+
+        res.status(500).json({
+            success: false,
+            database_connected: false,
+            error: err.message
+        });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(
