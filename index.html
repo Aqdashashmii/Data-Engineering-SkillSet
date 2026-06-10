@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DE Skill Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:    #0a0a1a;
+    --mid:    #16213e;
+    --accent: #e94560;
+    --learning: #ff9f43; /* Vibrant Amber/Orange for currently learning */
+    --done: #4ade80;     /* Fresh green for completed skills */
+    --soft:   #0f3460;
+    --white:  #ffffff;
+    --muted:  #a8afc4;
+    --field:  rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.12);
+    --radius: 20px;
+  }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    padding: 40px 20px;
+  }
+
+  /* ── Auth Card ── */
+  .card {
+    width: 900px;
+    max-width: 100%;
+    min-height: 540px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(20px);
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel { flex: 1; padding: 52px 44px; display: flex; flex-direction: column; justify-content: center; position: relative; transition: all 0.5s ease; }
+  .panel-left { background: linear-gradient(160deg, #0f3460 0%, #16213e 100%); border-right: 1px solid var(--border); }
+  .panel-right { background: transparent; }
+  .card::after { content: ''; position: absolute; left: 50%; top: 10%; height: 80%; width: 1px; background: linear-gradient(to bottom, transparent, var(--border), transparent); }
+
+  .panel-title { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--white); margin-bottom: 8px; line-height: 1.2; }
+  .panel-sub { font-size: 13px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; }
+
+  /* ── Form Elements ── */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 7px; }
+  .form-group input { width: 100%; padding: 12px 16px; background: var(--field); border: 1px solid var(--border); border-radius: 10px; color: var(--white); font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: var(--accent); background: rgba(233,69,96,0.05); }
+
+  .btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%); border: none; border-radius: 10px; color: var(--white); font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 20px rgba(233,69,96,0.35); }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-outline { width: 100%; padding: 14px; background: transparent; border: 1.5px solid var(--accent); border-radius: 10px; color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+  .btn-outline:hover { background: rgba(233,69,96,0.08); }
+
+  .cta-block .eyebrow { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 14px; font-weight: 600; }
+  .cta-block .headline { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--white); line-height: 1.25; margin-bottom: 16px; }
+  
+  .status-msg { font-size: 12px; text-align: center; margin-top: 12px; min-height: 18px; }
+  .status-msg.success { color: #4ade80; }
+  .status-msg.error   { color: var(--accent); }
+
+  #left-login  { display: flex; flex-direction: column; }
+  #left-signup { display: none; flex-direction: column; }
+  #right-login { display: flex; flex-direction: column; }
+  #right-signup{ display: none; flex-direction: column; }
+  .card.signup-mode #left-login  { display: none; }
+  .card.signup-mode #left-signup { display: flex; }
+  .card.signup-mode #right-login { display: none; }
+  .card.signup-mode #right-signup{ display: flex; }
+
+  /* ── Dashboard Styles ── */
+  #dashboard { display: none; width: 100%; max-width: 1200px; margin-top: 20px; }
+  .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
+  .dash-header h1 { font-family: 'Playfair Display', serif; color: var(--white); }
+  .dash-header span { color: var(--accent); }
+  
+  .level-section { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 15px; padding: 25px; margin-bottom: 30px; backdrop-filter: blur(10px); }
+  .level-title { font-size: 20px; color: var(--accent); margin-bottom: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; }
+  
+  .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  
+  /* ── Skill Card Base Styling ── */
+  .skill-card { 
+    background: var(--mid); 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid rgba(255,255,255,0.05); 
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+  }
+  .skill-card:hover { transform: translateY(-3px); }
+  
+  /* DYNAMIC MARKER STYLES */
+  /* Learning Marker (Pulsing Glow Accent) */
+  .skill-card.learning-mode {
+    border-color: var(--learning);
+    box-shadow: 0 0 20px rgba(255, 159, 67, 0.25);
+    animation: glowPulse 2s infinite alternate;
+  }
+
+
+  
+  /* Done Marker (Clean Green Accent) */
+  .skill-card.done-mode {
+    border-color: var(--done);
+    box-shadow: 0 5px 15px rgba(74, 222, 128, 0.1);
+  }
+
+  .current-mode {
+    border: 2px solid #ffd700;
+    box-shadow:
+        0 0 15px rgba(255,215,0,.5),
+        0 0 35px rgba(255,215,0,.3);
+
+    animation: currentPulse 1.5s infinite alternate;
+}
+
+@keyframes currentPulse {
+    from {
+        box-shadow: 0 0 10px rgba(255,215,0,.3);
+    }
+
+    to {
+        box-shadow: 0 0 30px rgba(255,215,0,.8);
+    }
+}
+
+.current-badge {
+    display: none;
+    background: #ffd700;
+    color: #000;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.current-mode .current-badge {
+    display: inline-block;
+}
+
+  /* Inline Mini Indicator Tag */
+  .learning-badge {
+    display: none;
+    font-size: 9px;
+    background: var(--learning);
+    color: #000;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .learning-mode .learning-badge { display: inline-block; }
+
+  @keyframes glowPulse {
+    0% { box-shadow: 0 0 10px rgba(255, 159, 67, 0.2); }
+    100% { box-shadow: 0 0 25px rgba(255, 159, 67, 0.45); }
+  }
+  
+  .skill-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 600; }
+  .skill-title-wrapper { display: flex; align-items: center; }
+  .skill-perc { color: var(--accent); }
+  .learning-mode .skill-perc { color: var(--learning); }
+  .done-mode .skill-perc { color: var(--done); }
+  
+  .controls { display: flex; gap: 15px; align-items: center; }
+  input[type="range"] { flex: 1; accent-color: var(--accent); transition: accent-color 0.3s; }
+  .learning-mode input[type="range"] { accent-color: var(--learning); }
+  .done-mode input[type="range"] { accent-color: var(--done); }
+
+  select { background: var(--ink); color: var(--white); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; outline: none; font-family: 'Inter'; cursor: pointer; }
+  select:focus { border-color: var(--accent); }
+  .learning-mode select { border-color: var(--learning); }
+  .done-mode select { border-color: var(--done); }
+
+  @media (max-width: 640px) {
+    .card { flex-direction: column; }
+    .card::after { display: none; }
+    .panel-left { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="authCard">
+  <div class="panel panel-left">
+    <div id="left-login">
+      <p class="panel-title">Welcome back</p>
+      <p class="panel-sub">Sign in with your credentials below.</p>
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
+      <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+      <p class="status-msg" id="loginStatus"></p>
+    </div>
+
+    <div id="left-signup">
+      <p class="panel-title">Create account</p>
+      <p class="panel-sub">Fill in your details to get started.</p>
+      <div class="form-group"><label>Full Name</label><input type="text" id="signupName" placeholder="John Doe" /></div>
+      <div class="form-group"><label>Email</label><input type="email" id="signupEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label>Password</label><input type="password" id="signupPassword" placeholder="Min 8 characters" /></div>
+      <div class="form-group"><label>Confirm Password</label><input type="password" id="signupConfirm" placeholder="Repeat password" /></div>
+      <button class="btn-primary" onclick="handleSignup()">Create Account</button>
+      <p class="status-msg" id="signupStatus"></p>
+    </div>
+  </div>
+
+  <div class="panel panel-right">
+    <div id="right-login" class="cta-block">
+      <span class="eyebrow">New here?</span>
+      <h2 class="headline">Join us &amp;<br/>get started<br/>today.</h2>
+      <button class="btn-outline" onclick="switchToSignup()">Create Account</button>
+    </div>
+    <div id="right-signup" class="cta-block">
+      <span class="eyebrow">Already a member?</span>
+      <h2 class="headline">Sign in &amp;<br/>pick up where<br/>you left off.</h2>
+      <button class="btn-outline" onclick="switchToLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="dash-header">
+    <h1>Welcome, <span id="userNameDisplay">User</span></h1>
+    <button class="btn-outline" style="width: auto; padding: 10px 30px;" onclick="logout()">Logout</button>
+  </div>
+  <div id="skills-container"></div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:3001';
+let currentUser = null;
+
+const deLevels = {
+  'Level 1 (Fundamentals)': ['Python', 'SQL', 'Git'],
+  'Level 2 (Ecosystem)': ['Scrum', 'Jira', 'Confluence', 'Hadoop', 'Spark', 'Databricks', 'Hive', 'Scoop', 'Airflow'],
+  'Level 3 (Cloud & DW)': ['AWS', 'Snowflake', 'Azure']
+};
+
+/* ── UI Toggles ── */
+function switchToSignup() { document.getElementById('authCard').classList.add('signup-mode'); }
+function switchToLogin() { document.getElementById('authCard').classList.remove('signup-mode'); }
+function setStatus(id, msg, type) { const el = document.getElementById(id); el.textContent = msg; el.className = 'status-msg ' + type; }
+
+/* ── Authentication ── */
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return setStatus('loginStatus', 'Please fill all fields.', 'error');
+
+  setStatus('loginStatus', 'Signing in...', '');
+  try {
+    const res = await fetch(`${API_BASE}/api/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentUser = data.user;
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      loadDashboard();
+    } else {
+      setStatus('loginStatus', data.message, 'error');
+    }
+  } catch (err) { setStatus('loginStatus', 'Server offline.', 'error'); }
+}
+
+async function handleSignup() {
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const password = document.getElementById('signupPassword').value;
+  const confirm = document.getElementById('signupConfirm').value;
+
+  if (!name || !email || !password) return setStatus('signupStatus', 'Fill all fields.', 'error');
+  if (password !== confirm) return setStatus('signupStatus', 'Passwords mismatch.', 'error');
+
+  setStatus('signupStatus', 'Creating...', '');
+  try {
+    const res = await fetch(`${API_BASE}/api/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+
+  setStatus('signupStatus', 'Success! Please login.', 'success');
+
+  // Clear signup form
+  document.getElementById('signupName').value = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupPassword').value = '';
+  document.getElementById('signupConfirm').value = '';
+
+  setTimeout(() => switchToLogin(), 1500);
+
+} else {
+  setStatus('signupStatus', data.message, 'error');
+}
+  } catch (err) { setStatus('signupStatus', 'Server offline.', 'error'); }
+}
+
+/* ── Dashboard Logic ── */
+async function loadDashboard() {
+  document.getElementById('authCard').style.display = 'none';
+  document.body.style.alignItems = 'flex-start';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('userNameDisplay').innerText = currentUser.name;
+
+  const res = await fetch(`${API_BASE}/api/skills/${currentUser.id}`);
+  const savedSkills = await res.json();
+  const skillMap = {};
+  savedSkills.forEach(s => skillMap[s.skill_name] = s);
+
+  renderSkills(skillMap);
+}
+
+function renderSkills(skillMap) {
+  const container = document.getElementById('skills-container');
+  container.innerHTML = '';
+
+  for (const [level, skills] of Object.entries(deLevels)) {
+    const section = document.createElement('div');
+    section.className = 'level-section';
+    section.innerHTML = `<h3 class="level-title">${level}</h3><div class="skills-grid"></div>`;
+    container.appendChild(section);
+
+    const grid = section.querySelector('.skills-grid');
+    
+    skills.forEach(skill => {
+      const data = skillMap[skill] || { percentage: 0, status: 'left' };
+      
+      // Determine structural dynamic classes based on marker configuration state
+      let modeClass = '';
+
+        if (data.status === 'learning')
+            modeClass = 'learning-mode';
+
+        if (data.status === 'current')
+            modeClass = 'current-mode';
+
+        if (data.status === 'done')
+            modeClass = 'done-mode';
+
+      const card = document.createElement('div');
+      card.className = `skill-card ${modeClass}`;
+      card.id = `card-${skill}`;
+      card.innerHTML = `
+        <div class="skill-header">
+          <div class="skill-title-wrapper">
+            <span>${skill}</span>
+            <span class="learning-badge">⚡ LEARNING</span>
+            <span class="current-badge">🔥 CURRENT</span>
+          </div>
+          <span class="skill-perc" id="perc-${skill}">${data.percentage}%</span>
+        </div>
+        <div class="controls">
+          <input type="range" min="0" max="100" value="${data.percentage}" 
+                 id="range-${skill}"
+                 onchange="syncSkill('${skill}')"
+                 oninput="document.getElementById('perc-${skill}').innerText = this.value + '%'">
+          <select id="stat-${skill}" onchange="syncSkill('${skill}')">
+            <option value="left" ${data.status === 'left' ? 'selected' : ''}>Left</option>
+
+            <option value="learning" ${data.status === 'learning' ? 'selected' : ''}>Learning</option>
+
+            <option value="current" ${data.status === 'current' ? 'selected' : ''}>Current Focus 🔥</option>
+
+            <option value="done" ${data.status === 'done' ? 'selected' : ''}>Done</option>
+          </select>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+}
+
+async function syncSkill(skillName) {
+  const percentage = document.getElementById(`range-${skillName}`).value;
+  const status = document.getElementById(`stat-${skillName}`).value;
+  const card = document.getElementById(`card-${skillName}`);
+
+  // Dynamically switch client-side visual classes instantly 
+  card.classList.remove(
+    'learning-mode',
+    'current-mode',
+    'done-mode'
+      );
+
+      if (status === 'learning')
+        card.classList.add('learning-mode');
+
+      if (status === 'current')
+        card.classList.add('current-mode');
+
+      if (status === 'done')
+        card.classList.add('done-mode');
+
+  await fetch(`${API_BASE}/api/skills/update`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      skill_name: skillName,
+      percentage: parseInt(percentage),
+      status: status
+    })
+  });
+}
+
+function logout() {
+    localStorage.removeItem('currentUser');
+
+    currentUser = null;
+
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('authCard').style.display = 'flex';
+
+    document.body.style.alignItems = 'center';
+
+    document.getElementById('loginPassword').value = '';
+}
+
+window.onload = () => {
+    const savedUser = localStorage.getItem('currentUser');
+
+    if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        loadDashboard();
+    }
+};
+</script>
+</body>
+</html>
