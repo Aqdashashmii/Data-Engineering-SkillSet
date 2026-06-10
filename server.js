@@ -29,6 +29,7 @@ const dbConfig = {
     } catch (err) {
         console.error("❌ Database Connection Failed");
         console.error(err);
+        console.error(err);
     }
 })();
 
@@ -222,7 +223,7 @@ app.get('/db-test', async (req, res) => {
     try {
         const conn = await mysql.createConnection(dbConfig);
 
-        const [rows] = await conn.execute('SELECT NOW() as current_time');
+        const [rows] = await conn.query('SELECT NOW() AS time');
 
         await conn.end();
 
@@ -242,7 +243,6 @@ app.get('/db-test', async (req, res) => {
         });
     }
 });
-
 app.listen(PORT, () => {
     console.log(
         `🚀 Server running on port ${PORT}`
